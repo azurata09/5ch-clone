@@ -13,6 +13,22 @@ const db = new sqlite.Database('./dist/data.db', (err) => {
     console.error(err)
     throw Error('データベースが開けませんでした')
   }
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS topics(
+      id INTEGER PRIMARY KEY,
+      title TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );`)
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS posts(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      topic_id TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      poster TEXT DEFAULT "名無し",
+      content TEXT NOT NULL
+    );`)
 })
 
 app.get('/ping', (req, res) => {
