@@ -15,7 +15,7 @@ const topicIdNotFountMessage = (id: number) => ({
   jaMessage: id + "というトピックIDは存在しません。"
 })
 
-const db = new sqlite.Database('./dist/data.db', (err) => {
+const db = new sqlite.Database('./data/data.db', (err) => {
    if(err) {
     console.error(err)
     throw Error('データベースが開けませんでした')
