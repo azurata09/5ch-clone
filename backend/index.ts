@@ -42,20 +42,19 @@ app.get('/ping', (req, res) => {
   return res.send('pong')
 })
 
-// スレ一覧
+// スレ一覧, Done
 app.get('/topics/', (req, res) => {
-  // トピック一覧を取得して返す (今はダミーデータ)
+  // トピック一覧を取得して返す
   db.all('SELECT * FROM topics;', (err, rows) => {
     if(err) console.error(err)
-    else console.log(rows)
-  })
 
-  return res.send({
-    topics: topicsDummyData
+    return res.send({
+      topics: rows
+    })
   })
 })
 
-// 板作成
+// 板作成, Done
 app.post('/topic/', (req, res) => {
   // 投稿内容を解釈してデータベースに格納 (今はダミーデータ)
   type RequestBody = {
@@ -103,7 +102,7 @@ app.get('/topic/:id/posts/', (req, res) => {
   const id: number = parseInt(req.params.id)
 
   // 指定されたトピックがない場合、エラーを返す
-  db.get<{ title: string }[]>(`SELECT title FROM topics WHERE id = ${id};`, (err, rows) => {
+  db.get<{ title: string }>(`SELECT title FROM topics WHERE id = ${id};`, (err, row) => {
     if(err) {
       console.error(err)
       return res.status(500).send({
@@ -112,14 +111,14 @@ app.get('/topic/:id/posts/', (req, res) => {
       })
     }
 
-    if(0 < rows.length) {
+    if(!row.title) {
       return res.status(400).send(topicIdNotFountMessage(id))
     }
 
     // 投稿一覧を取得して返す (今はダミーデータ)
-    db.get<Post[]>(`SELECT * FROM posts WHERE topic_id = ${id}`, (err, rows) => {
+    db.all<Post[]>(`SELECT * FROM posts WHERE topic_id = ${id}`, (err, rows) => {
       return res.send({
-        topic_title: '',
+        topic_title: row.title,
         messages: rows
       })
     })
