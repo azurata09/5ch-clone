@@ -1,7 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import sqlite from 'sqlite3'
-import { topicsDummyData, postsDummyData } from './types'
+import { topicsDummyData, postsDummyData, Post } from './types'
 
 const app = express()
 const port = 3000
@@ -38,16 +38,6 @@ const db = new sqlite.Database('./data/data.db', (err) => {
     );`)
 })
 
-const existsTopic = (topicId: number): boolean => {
-  db.get<{ 'COUNT(*)': number }>(`SELECT COUNT(*) FROM topics WHERE id == ?;`, topicId, (err, row) => {
-    if(err) {
-      console.error(err)
-    }
-    return row['COUNT(*)'] > 0
-  })
-  return false
-}
-
 app.get('/ping', (req, res) => {
   return res.send('pong')
 })
@@ -68,47 +58,111 @@ app.get('/topics/', (req, res) => {
 // 板作成
 app.post('/topic/', (req, res) => {
   // 投稿内容を解釈してデータベースに格納 (今はダミーデータ)
+  type RequestBody = {
+    title: string
+  }
 
-  // 問題ないなら何も返さない (200を返す)
-  return res.status(200)
+  // いずれかの必須プロパティがbodyにない場合、リクエスト不正で返す
+  if(!req.body.title) {
+    return res.status(400).send({
+      message: 'Bad request body.',
+      jaMessage: 'リクエスト内容が不正です。'
+    })
+  }
+
+  const body: RequestBody = req.body
+
+  db.run(`INSERT INTO topics(title) VALUES("${body.title}");`, (err) => {
+    if(err) {
+      console.error(err)
+      return res.status(500).send({
+        message: 'Internal Server Error.',
+        jaMessage: 'サーバー内エラーが起きました。'
+      })
+    }
+
+    db.get<{ id: number }>(`SELECT id FROM topics WHERE title = "${body.title}" ORDER BY created_at DESC`, (err, rows) => {
+      if(err) {
+        console.error(err)
+        return res.status(500).send({
+          message: 'Internal Server Error.',
+          jaMessage: 'サーバー内エラーが起きました。'
+        })
+      }
+
+      // 問題ないならトピックIDを返す (200と一緒に)
+      return res.status(200).send({
+        id: rows.id
+      })
+    })
+  })
 })
 
 // レス一覧
 app.get('/topic/:id/posts/', (req, res) => {
-  // 指定されたトピックがない場合、エラーを返す
   const id: number = parseInt(req.params.id)
-  const topicExists = existsTopic(id)
-  if(!topicExists) {
-    return res.status(400).send(topicIdNotFountMessage(id))
-  }
 
-  // 投稿一覧を取得して返す (今はダミーデータ)
-  return res.send({
-    topic_title: 'foo',
-    messages: postsDummyData
+  // 指定されたトピックがない場合、エラーを返す
+  db.get<{ title: string }[]>(`SELECT title FROM topics WHERE id = ${id};`, (err, rows) => {
+    if(err) {
+      console.error(err)
+      return res.status(500).send({
+        message: 'Internal Server Error.',
+        jaMessage: 'サーバー内エラーが起きました。'
+      })
+    }
+
+    if(0 < rows.length) {
+      return res.status(400).send(topicIdNotFountMessage(id))
+    }
+
+    // 投稿一覧を取得して返す (今はダミーデータ)
+    db.get<Post[]>(`SELECT * FROM posts WHERE topic_id = ${id}`, (err, rows) => {
+      return res.send({
+        topic_title: '',
+        messages: rows
+      })
+    })
   })
 })
 
 // レスする
-app.post('/topic/:id/post/', async (req, res) => {
+app.post('/topic/:id/post/', (req, res) => {
   // 指定されたトピックがない場合、エラーを返す
   const id: number = parseInt(req.params.id)
-  const topicExists = existsTopic(id)
-  if(!topicExists) {
-    return res.status(400).send(topicIdNotFountMessage(id))
-  }
 
-  // 投稿内容を解釈してデータベースに格納
-  type RequestBody = {
-    poster: string
-    content: string
-  }
+  db.get<{ title: string }[]>(`SELECT COUNT(*) FROM topics WHERE id == ${id};`, (err, rows) => {
+    if(err) {
+      console.error(err)
+      return res.status(500).send({
+        message: 'Internal Server Error.',
+        jaMessage: 'サーバー内エラーが起きました。'
+      })
+    }
 
-  const body: RequestBody = req.body
-  db.run('INSERT INTO posts(topic_id, poster, content) values(?, ?, ?);', id, body.poster, body.content)
+    if(0 < rows.length) {
+      return res.status(400).send(topicIdNotFountMessage(id))
+    }
 
-  // 問題ないなら何も返さない (200を返す)
-  return res.status(200)
+    // 投稿内容を解釈してデータベースに格納
+    type RequestBody = {
+      poster: string
+      content: string
+    }
+
+    // いずれかのプロパティがbodyにない場合
+    if(!req.body.poster || !req.body.content) {
+      return res.status(400).send({
+        message: 'Bad request body.',
+        jaMessage: 'リクエスト内容が不正です。'
+      })
+    }
+
+    // 問題ないなら何も返さない (200を返す)
+    const body: RequestBody = req.body
+    db.run(`INSERT INTO posts(topic_id, poster, content) values(${id}, ${body.poster}, ${body.content});`)
+    return res.status(200)
+  })
 })
 
 app.listen(port, () => {
