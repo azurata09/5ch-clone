@@ -77,7 +77,6 @@ app.post('/topic/', (req, res) => {
 app.get('/topic/:id/posts/', (req, res) => {
   // 指定されたトピックがない場合、エラーを返す
   const id: number = parseInt(req.params.id)
-
   const topicExists = existsTopic(id)
   if(!topicExists) {
     return res.status(400).send(topicIdNotFountMessage(id))
@@ -94,13 +93,19 @@ app.get('/topic/:id/posts/', (req, res) => {
 app.post('/topic/:id/post/', async (req, res) => {
   // 指定されたトピックがない場合、エラーを返す
   const id: number = parseInt(req.params.id)
-
   const topicExists = existsTopic(id)
   if(!topicExists) {
     return res.status(400).send(topicIdNotFountMessage(id))
   }
 
-  db.run('INSERT INTO posts(topic_id, poster, content) values(?, ?, ?);')
+  // 投稿内容を解釈してデータベースに格納
+  type RequestBody = {
+    poster: string
+    content: string
+  }
+
+  const body: RequestBody = req.body
+  db.run('INSERT INTO posts(topic_id, poster, content) values(?, ?, ?);', id, body.poster, body.content)
 
   // 問題ないなら何も返さない (200を返す)
   return res.status(200)
