@@ -133,9 +133,9 @@ app.get('/topic/:id/posts/', (req, res) => {
 
 // レスする
 app.post('/topic/:id/post/', (req, res) => {
-  // 指定されたトピックがない場合、エラーを返す
   const id: number = parseInt(req.params.id)
 
+  // 指定されたトピックがない場合、エラーを返す
   db.get<{ title: string }[]>(`SELECT COUNT(*) FROM topics WHERE id == ${id};`, (err, rows) => {
     if(err) {
       console.error(err)
