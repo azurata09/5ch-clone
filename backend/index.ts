@@ -16,7 +16,7 @@ const initPostsSql = fs.readFileSync('./sql/init_posts.sql').toString()
 const dummyTopicsSqls = fs.readFileSync('./sql/dummy_topics.sql').toString().split(';').slice(0, -1)
 const dummyPostsSqls = fs.readFileSync('./sql/dummy_posts.sql').toString().split(';').slice(0, -1)
 
-const topicIdNotFountMessage = (id: number) => ({
+const topicIdNotFoundMessage = (id: number) => ({
   message: "Topic id " + id + " is not found.",
   jaMessage: id + "というトピックIDは存在しません。"
 })
@@ -116,7 +116,7 @@ app.get('/topic/:id/posts/', (req, res) => {
     }
 
     if(!row.title) {
-      return res.status(400).send(topicIdNotFountMessage(id))
+      return res.status(400).send(topicIdNotFoundMessage(id))
     }
 
     // 投稿一覧を取得して返す (今はダミーデータ)
@@ -141,7 +141,7 @@ app.post('/topic/:id/post/', (req, res) => {
     }
 
     if(0 < rows.length) {
-      return res.status(400).send(topicIdNotFountMessage(id))
+      return res.status(400).send(topicIdNotFoundMessage(id))
     }
 
     // 投稿内容を解釈してデータベースに格納
