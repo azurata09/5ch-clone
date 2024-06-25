@@ -13,6 +13,8 @@ app.use(express.urlencoded({ extended: true }))
 
 const initTopicsSql = fs.readFileSync('./sql/init_topics.sql').toString()
 const initPostsSql = fs.readFileSync('./sql/init_posts.sql').toString()
+const dummyTopicsSqls = fs.readFileSync('./sql/dummy_topics.sql').toString().split(';').slice(0, -1)
+const dummyPostsSqls = fs.readFileSync('./sql/dummy_posts.sql').toString().split(';').slice(0, -1)
 
 const topicIdNotFountMessage = (id: number) => ({
   message: "Topic id " + id + " is not found.",
@@ -26,8 +28,19 @@ const db = new sqlite.Database('./data/data.db', (err) => {
   }
 
   db.serialize(() => {
+    // DBの初期化
     db.run(initTopicsSql)
     db.run(initPostsSql)
+
+    // ダミーデータを追加
+    db.get<{ 'COUNT(*)': number }>('SELECT COUNT(*) FROM topics;', (err, result) =>{
+      if(err) console.error(err)
+      if(result['COUNT(*)'] < 1) dummyTopicsSqls.forEach(sql => db.run(sql))
+    })
+    db.get<{ 'COUNT(*)': number }>('SELECT COUNT(*) FROM posts;', (err, result) =>{
+      if(err) console.error(err)
+      if(result['COUNT(*)'] < 1) dummyPostsSqls.forEach(sql => db.run(sql))
+    })
   })
 })
 
