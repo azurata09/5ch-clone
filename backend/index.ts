@@ -21,6 +21,16 @@ const topicIdNotFountMessage = (id: number) => ({
   jaMessage: id + "というトピックIDは存在しません。"
 })
 
+const internalServerErrorMessage = () => ({
+  message: 'Bad request body.',
+  jaMessage: 'リクエスト内容が不正です。'
+})
+
+const badRequestMessage = () => ({
+  message: 'Bad request body.',
+  jaMessage: 'リクエスト内容が不正です。'
+})
+
 const db = new sqlite.Database('./data/data.db', (err) => {
    if(err) {
     console.error(err)
@@ -69,10 +79,7 @@ app.post('/topic/', (req, res) => {
 
   // いずれかの必須プロパティがbodyにない場合、リクエスト不正で返す
   if(!req.body.title) {
-    return res.status(400).send({
-      message: 'Bad request body.',
-      jaMessage: 'リクエスト内容が不正です。'
-    })
+    return res.status(400).send(badRequestMessage())
   }
 
   const body: RequestBody = req.body
@@ -80,19 +87,13 @@ app.post('/topic/', (req, res) => {
   db.run(`INSERT INTO topics(title) VALUES("${body.title}");`, (err) => {
     if(err) {
       console.error(err)
-      return res.status(500).send({
-        message: 'Internal Server Error.',
-        jaMessage: 'サーバー内エラーが起きました。'
-      })
+      return res.status(500).send(internalServerErrorMessage())
     }
 
     db.get<{ id: number }>(`SELECT id FROM topics WHERE title = "${body.title}" ORDER BY created_at DESC`, (err, rows) => {
       if(err) {
         console.error(err)
-        return res.status(500).send({
-          message: 'Internal Server Error.',
-          jaMessage: 'サーバー内エラーが起きました。'
-        })
+        return res.status(500).send(internalServerErrorMessage())
       }
 
       // 問題ないならトピックIDを返す (200と一緒に)
@@ -111,10 +112,7 @@ app.get('/topic/:id/posts/', (req, res) => {
   db.get<{ title: string }>(`SELECT title FROM topics WHERE id = ${id};`, (err, row) => {
     if(err) {
       console.error(err)
-      return res.status(500).send({
-        message: 'Internal Server Error.',
-        jaMessage: 'サーバー内エラーが起きました。'
-      })
+      return res.status(500).send(internalServerErrorMessage())
     }
 
     if(!row.title) {
@@ -139,10 +137,7 @@ app.post('/topic/:id/post/', (req, res) => {
   db.get<{ title: string }[]>(`SELECT COUNT(*) FROM topics WHERE id == ${id};`, (err, rows) => {
     if(err) {
       console.error(err)
-      return res.status(500).send({
-        message: 'Internal Server Error.',
-        jaMessage: 'サーバー内エラーが起きました。'
-      })
+      return res.status(500).send(internalServerErrorMessage())
     }
 
     if(0 < rows.length) {
@@ -157,10 +152,7 @@ app.post('/topic/:id/post/', (req, res) => {
 
     // いずれかのプロパティがbodyにない場合
     if(!req.body.poster || !req.body.content) {
-      return res.status(400).send({
-        message: 'Bad request body.',
-        jaMessage: 'リクエスト内容が不正です。'
-      })
+      return res.status(400).send(badRequestMessage())
     }
 
     // 問題ないなら何も返さない (200を返す)
