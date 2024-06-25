@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import sqlite from 'sqlite3'
+import fs from 'fs'
 import { topicsDummyData, postsDummyData, Post } from './types'
 
 const app = express()
@@ -9,6 +10,9 @@ const port = 3000
 app.use(cors())
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }))
+
+const initTopicsSql = fs.readFileSync('./sql/init_topics.sql').toString()
+const initPostsSql = fs.readFileSync('./sql/init_posts.sql').toString()
 
 const topicIdNotFountMessage = (id: number) => ({
   message: "Topic id " + id + " is not found.",
@@ -21,21 +25,10 @@ const db = new sqlite.Database('./data/data.db', (err) => {
     throw Error('データベースが開けませんでした')
   }
 
-  db.run(`
-     CREATE TABLE IF NOT EXISTS topics(
-      id INTEGER PRIMARY KEY,
-      title TEXT NOT NULL,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP
-    );`)
-
-   db.run(`
-    CREATE TABLE IF NOT EXISTS posts(
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      topic_id TEXT NOT NULL,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      poster TEXT DEFAULT "名無し",
-      content TEXT NOT NULL
-    );`)
+  db.serialize(() => {
+    db.run(initTopicsSql)
+    db.run(initPostsSql)
+  })
 })
 
 app.get('/ping', (req, res) => {
