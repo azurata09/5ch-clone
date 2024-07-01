@@ -134,13 +134,13 @@ app.post('/topic/:id/post/', (req, res) => {
   const id: number = parseInt(req.params.id)
 
   // 指定されたトピックがない場合、エラーを返す
-  db.get<{ title: string }[]>(`SELECT COUNT(*) FROM topics WHERE id == ${id};`, (err, rows) => {
+  db.get<{ 'COUNT(*)': number }>(`SELECT COUNT(*) FROM topics WHERE id = ${id};`, (err, result) => {
     if(err) {
       console.error(err)
       return res.status(500).send(internalServerErrorMessage())
     }
 
-    if(0 < rows.length) {
+    if(result['COUNT(*)'] < 1) {
       return res.status(400).send(topicIdNotFoundMessage(id))
     }
 
@@ -157,8 +157,14 @@ app.post('/topic/:id/post/', (req, res) => {
 
     // 問題ないなら何も返さない (200を返す)
     const body: RequestBody = req.body
-    db.run(`INSERT INTO posts(topic_id, poster, content) values(${id}, ${body.poster}, ${body.content});`)
-    return res.status(200)
+
+    db.run(`INSERT INTO posts(topic_id, poster, content) values(${id}, "${body.poster}", "${body.content}");`, (err) => {
+      if(err) {
+        console.error(err)
+        return res.status(500).send(internalServerErrorMessage())
+      }
+      return res.status(200).send()
+    })
   })
 })
 
